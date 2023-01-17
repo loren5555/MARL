@@ -1,0 +1,5 @@
+/.idea/
+/.vscode/
+/ori_model/
+/ori_result/
+**/__pycache__/
