@@ -66,8 +66,10 @@ def td_lambda_target(batch, max_episode_len, q_targets, args):
         returns = torch.zeros((episode_num, args.n_agents))
         for n in range(1, max_episode_len - transition_idx):
             returns += pow(args.td_lambda, n - 1) * n_step_return[:, transition_idx, :, n - 1]
-        lambda_return[:, transition_idx] = (1 - args.td_lambda) * returns + \
-                                           pow(args.td_lambda, max_episode_len - transition_idx - 1) * \
-                                           n_step_return[:, transition_idx, :, max_episode_len - transition_idx - 1]
+        lambda_return[:, transition_idx] = (
+            1 - args.td_lambda) * returns + \
+            pow(args.td_lambda, max_episode_len - transition_idx - 1) * \
+            n_step_return[:, transition_idx, :, max_episode_len - transition_idx - 1
+        ]
     # --------------------------------------------------lambda return---------------------------------------------------
     return lambda_return

@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 import torch
 from torch.distributions import Categorical
@@ -86,7 +88,8 @@ class Agents:
         """
         :param inputs: # q_value of all actions
         """
-        action_num = avail_actions.sum(dim=1, keepdim=True).float().repeat(1, avail_actions.shape[-1])  # num of avail_actions
+        # num of avail_actions
+        action_num = avail_actions.sum(dim=1, keepdim=True).float().repeat(1, avail_actions.shape[-1])
         # 先将Actor网络的输出通过softmax转换成概率分布
         prob = torch.nn.functional.softmax(inputs, dim=-1)
         # add noise of epsilon
@@ -147,7 +150,10 @@ class CommAgents:
         else:
             raise Exception("No such algorithm")
         self.args = args
-        print('Init CommAgents')
+        self.logger = logging.getLogger("MARL")
+        # print('Init CommAgents')
+        self.logger.info("Init CommAgents")
+
 
     # 根据weights得到概率，然后再根据epsilon选动作
     def choose_action(self, weights, avail_actions, epsilon):

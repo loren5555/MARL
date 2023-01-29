@@ -1,7 +1,8 @@
+import logging
+
 import numpy as np
 import torch
 from torch.distributions import one_hot_categorical
-import time
 
 
 class RolloutWorker:
@@ -18,7 +19,10 @@ class RolloutWorker:
         self.epsilon = args.epsilon
         self.anneal_epsilon = args.anneal_epsilon
         self.min_epsilon = args.min_epsilon
-        print('Init RolloutWorker')
+
+        self.logger = logging.getLogger("MARL")
+        # print('Init RolloutWorker')
+        self.logger.info("Init RolloutWorker")
 
     @torch.no_grad()
     def generate_episode(self, episode_num=None, evaluate=False):
@@ -155,13 +159,22 @@ class CommRolloutWorker:
         self.epsilon = args.epsilon
         self.anneal_epsilon = args.anneal_epsilon
         self.min_epsilon = args.min_epsilon
-        print('Init CommRolloutWorker')
+
+        self.logger = logging.getLogger("MARL")
+        # print('Init CommRolloutWorker')
+        self.logger.info("Init CommRolloutWorker")
 
     @torch.no_grad()
     def generate_episode(self, episode_num=None, evaluate=False):
         if self.args.replay_dir != '' and evaluate and episode_num == 0:  # prepare for save replay
             self.env.close()
+
         o, u, r, s, avail_u, u_onehot, terminate, padded = [], [], [], [], [], [], [], []
+        # TODO 生成适合ucb的episode
+        # if "ucb1" in self.args.alg:
+        #     action_weights,  = []  # 为ucb1存储advantage
+        #     choosen_times = [0] * self.args.n_agents
+        #
         self.env.reset()
         terminated = False
         win_tag = False

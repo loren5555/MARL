@@ -29,22 +29,6 @@ Use `pip install -r requirements.txt` to install the following requirements:
 - [SMAC](https://github.com/oxwhirl/smac)
 - [pysc2](https://github.com/deepmind/pysc2)
 
-## Acknowledgement
-
-+ [SMAC](https://github.com/oxwhirl/smac)
-+ [pymarl](https://github.com/oxwhirl/pymarl)
-
-
-## TODO List
-
-- [x] Add CUDA option
-- [x] DyMA-CL
-- [x] G2ANet
-- [x] MAVEN
-- [ ] VBC
-- [ ] Other SOTA MARL algorithms
-- [ ] Update results on other maps
-
 ## Quick Start
 
 ```shell
@@ -57,19 +41,6 @@ If you just want to use this project for demonstration, you should set `--evalua
 
 The running of DyMA-CL is independent from others because it requires different environment settings, so we put it on another project. For more details, please read [DyMA-CL documentation](https://github.com/starry-sky6688/DyMA-CL).
 
-## Result
-
-We independently train these algorithms for 8 times and take the mean of the 8 independent results, and we evaluate them for 20 episodes every 100 training steps. All of the results are saved in  `./result`.
-Results on other maps are still in training, we will update them later.
-
-### 1. Mean Win Rate of 8 Independent Runs on `3m --difficulty=7(VeryHard)`
-<div align=center><img width = '600' height ='300' src ="https://github.com/starry-sky6688/StarCraft/blob/master/result/overview_3m.png"/></div>
-
-### 2. Mean Win Rate of 8 Independent Runs on `8m --difficulty=7(VeryHard)`
-<div align=center><img width = '600' height ='300' src ="https://github.com/starry-sky6688/StarCraft/blob/master/result/overview_8m.png"/></div>
-
-### 3. Mean Win Rate of 8 Independent Runs on `2s3z --difficulty=7(VeryHard)`
-<div align=center><img width = '600' height ='300' src ="https://github.com/starry-sky6688/StarCraft/blob/master/result/overview_2s3z.png"/></div>
 
 ## Replay
 

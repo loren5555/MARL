@@ -1,9 +1,13 @@
-import torch
 import os
+import logging
+
+import torch
+
 from network.base_net import RNN
 from network.commnet import CommNet
 from network.g2anet import G2ANet
 from network.coma_critic import ComaCritic
+from network.ucb1_net import UCB1Net
 from common.utils import td_lambda_target
 
 
@@ -21,6 +25,7 @@ class COMA:
         if args.reuse_network:
             actor_input_shape += self.n_agents
         self.args = args
+        self.logger = logging.getLogger("MARL")
 
         # 神经网络
         # 每个agent选动作的网络,输出当前agent所有动作对应的概率，用该概率选动作的时候还需要用softmax再运算一次。
@@ -33,6 +38,10 @@ class COMA:
         elif self.args.alg == 'coma+g2anet':
             print('Init alg coma+g2anet')
             self.eval_rnn = G2ANet(actor_input_shape, args)
+        elif self.args.alg == 'coma+ucb1':
+            # print('Init alg coma+ucb1')
+            self.logger.info('Init alg coma+ucb1')
+            self.eval_rnn = UCB1Net(actor_input_shape, args)
         else:
             raise Exception("No such algorithm")
 
@@ -72,6 +81,8 @@ class COMA:
         # 执行过程中，要为每个agent都维护一个eval_hidden
         # 学习过程中，要为每个episode的每个agent都维护一个eval_hidden
         self.eval_hidden = None
+
+
 
     def _get_critic_input_shape(self):
         # state

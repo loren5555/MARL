@@ -1,10 +1,19 @@
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-
+from common.logger_generator import LoggerGenerator
 
 from runner import Runner
 from smac.env import StarCraft2Env
-from common.arguments import get_common_args, get_coma_args, get_mixer_args, get_centralv_args, get_reinforce_args, get_commnet_args, get_g2anet_args
+from common.arguments import get_common_args, get_coma_args, get_mixer_args, get_centralv_args, get_reinforce_args, \
+    get_commnet_args, get_g2anet_args, get_ucb1_args
+
+
+logger = LoggerGenerator(logger_name="MARL").get_logger()
+logger.propagate = False
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # 解决某个错误 该错误可能由多个conda环境冲突引起
+
+# TODO 服务器训练需要log功能而不能在终端输出
+
+# TODO 添加Tensorboard支持 便于在服务器观看训练状况
 
 if __name__ == '__main__':
     for i in range(8):
@@ -17,15 +26,24 @@ if __name__ == '__main__':
             args = get_reinforce_args(args)
         else:
             args = get_mixer_args(args)
+
         if args.alg.find('commnet') > -1:
             args = get_commnet_args(args)
         if args.alg.find('g2anet') > -1:
             args = get_g2anet_args(args)
-        env = StarCraft2Env(map_name=args.map,
-                            step_mul=args.step_mul,
-                            difficulty=args.difficulty, 
-                            game_version=args.game_version,
-                            replay_dir=args.replay_dir)
+        if args.alg.find('ucb1') > -1:
+            args = get_ucb1_args(args)
+
+        env = StarCraft2Env(
+            map_name=args.map,
+            step_mul=args.step_mul,
+            difficulty=args.difficulty,
+            game_version=args.game_version,
+            replay_dir=args.replay_dir,
+            window_size_x=1024,
+            window_size_y=768
+        )
+
         env_info = env.get_env_info()
         args.n_actions = env_info["n_actions"]
         args.n_agents = env_info["n_agents"]
@@ -33,6 +51,13 @@ if __name__ == '__main__':
         args.obs_shape = env_info["obs_shape"]
         args.episode_limit = env_info["episode_limit"]
         runner = Runner(env, args)
+
+        logger.info("=" * 60)
+        logger.info(f"Running {i} run")
+        logger.info("=" * 60)
+        logger.info(f"parameters: {args}")
+        logger.info("=" * 60)
+
         if not args.evaluate:
             runner.run(i)
         else:

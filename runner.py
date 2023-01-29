@@ -1,22 +1,25 @@
-import numpy as np
 import os
-from common.rollout import RolloutWorker, CommRolloutWorker
-from agent.agent import Agents, CommAgents
-from common.replay_buffer import ReplayBuffer
+import logging
+
+import numpy as np
 import matplotlib.pyplot as plt
+
+from agent.agent import Agents, CommAgents
+from common.rollout import RolloutWorker, CommRolloutWorker
+from common.replay_buffer import ReplayBuffer
 
 
 class Runner:
     def __init__(self, env, args):
         self.env = env
 
-        if args.alg.find('commnet') > -1 or args.alg.find('g2anet') > -1:  # communication agent
+        if args.alg.find('commnet') > -1 or args.alg.find('g2anet') > -1 or args.alg.find('ucb1'):  # communication agent
             self.agents = CommAgents(args)
             self.rolloutWorker = CommRolloutWorker(env, self.agents, args)
         else:  # no communication agent
             self.agents = Agents(args)
             self.rolloutWorker = RolloutWorker(env, self.agents, args)
-        if not args.evaluate and args.alg.find('coma') == -1 and args.alg.find('central_v') == -1 and args.alg.find('reinforce') == -1:  # these 3 algorithms are on-poliy
+        if not args.evaluate and args.alg.find('coma') == -1 and args.alg.find('central_v') == -1 and args.alg.find('reinforce') == -1:  # these 3 algorithms are on-policy
             self.buffer = ReplayBuffer(args)
         self.args = args
         self.win_rates = []
@@ -27,21 +30,23 @@ class Runner:
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 
+        self.logger = logging.getLogger("MARL")
+
     def run(self, num):
-        time_steps, train_steps, evaluate_steps = 0, 0, -1
+        time_steps, train_steps, evaluate_steps, log_steps = 0, 0, -1, -1  # 总步数， 训练轮数， 评测轮数
         while time_steps < self.args.n_steps:
-            print('Run {}, time_steps {}'.format(num, time_steps))
-            
-            #! ######################################## 
-            #! evaluate, disable to accelerate debugging
-            if time_steps // self.args.evaluate_cycle > evaluate_steps:
-                win_rate, episode_reward = self.evaluate()
-                # print('win_rate is ', win_rate)
-                self.win_rates.append(win_rate)
-                self.episode_rewards.append(episode_reward)
-                self.plt(num)
-                evaluate_steps += 1
-            #! ######################################## 
+            # print('Run {}, time_steps {}， train_steps{}'.format(num, time_steps, train_steps))
+            if time_steps // 100 > log_steps:
+                self.logger.info(f"Run: {num}, time_steps: {time_steps}, train_steps: {train_steps}")
+                log_steps += 1
+            # eval环节 注释以提升调试速度
+            # if time_steps // self.args.evaluate_cycle > evaluate_steps:
+            #     win_rate, episode_reward = self.evaluate()
+            #     # print('win_rate is ', win_rate)
+            #     self.win_rates.append(win_rate)
+            #     self.episode_rewards.append(episode_reward)
+            #     self.plt(num)
+            #     evaluate_steps += 1
 
             episodes = []
             # 收集self.args.n_episodes个episodes
@@ -99,12 +104,3 @@ class Runner:
         np.save(self.save_path + '/win_rates_{}'.format(num), self.win_rates)
         np.save(self.save_path + '/episode_rewards_{}'.format(num), self.episode_rewards)
         plt.close()
-
-
-
-
-
-
-
-
-
