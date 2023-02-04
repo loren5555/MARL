@@ -25,28 +25,27 @@ class Runner:
         self.win_rates = []
         self.episode_rewards = []
 
+        self.logger = logging.getLogger("MARL")
         # 用来保存plt和pkl
-        self.save_path = self.args.result_dir + '/' + args.alg + '/' + args.map
+        self.save_path = os.path.join(self.args.result_dir, args.alg, args.map, args.run_name)
+
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 
-        self.logger = logging.getLogger("MARL")
 
     def run(self, num):
-        time_steps, train_steps, evaluate_steps, log_steps = 0, 0, -1, -1  # 总步数， 训练轮数， 评测轮数
+        time_steps, train_steps, evaluate_steps = 0, 0, -1  # 总步数， 训练轮数， 评测轮数, log轮数
         while time_steps < self.args.n_steps:
-            # print('Run {}, time_steps {}， train_steps{}'.format(num, time_steps, train_steps))
-            if time_steps // 100 > log_steps:
-                self.logger.info(f"Run: {num}, time_steps: {time_steps}, train_steps: {train_steps}")
-                log_steps += 1
-            # eval环节 注释以提升调试速度
-            # if time_steps // self.args.evaluate_cycle > evaluate_steps:
-            #     win_rate, episode_reward = self.evaluate()
-            #     # print('win_rate is ', win_rate)
-            #     self.win_rates.append(win_rate)
-            #     self.episode_rewards.append(episode_reward)
-            #     self.plt(num)
-            #     evaluate_steps += 1
+            # eval环节
+            if self.args.debug_no_eval is False:
+                if time_steps // self.args.evaluate_cycle > evaluate_steps:
+                    win_rate, episode_reward = self.evaluate()
+                    self.logger.info(f"time steps: {time_steps}, train steps: {train_steps}, "
+                                     f"evaluate steps: {evaluate_steps}, win rate: {win_rate}, "
+                                     f"episode reward: {episode_reward}")
+                    self.episode_rewards.append(episode_reward)
+                    self.plt(num)
+                    evaluate_steps += 1
 
             episodes = []
             # 收集self.args.n_episodes个episodes
@@ -71,7 +70,9 @@ class Runner:
                     self.agents.train(mini_batch, train_steps)
                     train_steps += 1
         win_rate, episode_reward = self.evaluate()
-        print('win_rate is ', win_rate)
+        self.logger.info(f"time steps: {time_steps}, train steps: {train_steps}, "
+                         f"evaluate steps: {evaluate_steps}, win rate: {win_rate}, "
+                         f"episode reward: {episode_reward}")
         self.win_rates.append(win_rate)
         self.episode_rewards.append(episode_reward)
         self.plt(num)

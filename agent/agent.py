@@ -150,9 +150,9 @@ class CommAgents:
         else:
             raise Exception("No such algorithm")
         self.args = args
+
         self.logger = logging.getLogger("MARL")
-        # print('Init CommAgents')
-        self.logger.info("Init CommAgents")
+        self.logger.info(f"Init CommAgents")
 
 
     # 根据weights得到概率，然后再根据epsilon选动作

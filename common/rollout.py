@@ -161,7 +161,6 @@ class CommRolloutWorker:
         self.min_epsilon = args.min_epsilon
 
         self.logger = logging.getLogger("MARL")
-        # print('Init CommRolloutWorker')
         self.logger.info("Init CommRolloutWorker")
 
     @torch.no_grad()

@@ -30,16 +30,15 @@ class COMA:
         # 神经网络
         # 每个agent选动作的网络,输出当前agent所有动作对应的概率，用该概率选动作的时候还需要用softmax再运算一次。
         if self.args.alg == 'coma':
-            print('Init alg coma')
+            self.logger.info("Init alg coma")
             self.eval_rnn = RNN(actor_input_shape, args)
         elif self.args.alg == 'coma+commnet':
-            print('Init alg coma+commnet')
+            self.logger.info('Init alg coma+commnet')
             self.eval_rnn = CommNet(actor_input_shape, args)
         elif self.args.alg == 'coma+g2anet':
-            print('Init alg coma+g2anet')
+            self.logger.info('Init alg coma+g2anet')
             self.eval_rnn = G2ANet(actor_input_shape, args)
         elif self.args.alg == 'coma+ucb1':
-            # print('Init alg coma+ucb1')
             self.logger.info('Init alg coma+ucb1')
             self.eval_rnn = UCB1Net(actor_input_shape, args)
         else:
@@ -312,7 +311,8 @@ class COMA:
 
     def save_model(self, train_step):
         num = str(train_step // self.args.save_cycle)
-        if not os.path.exists(self.model_dir):
-            os.makedirs(self.model_dir)
-        torch.save(self.eval_critic.state_dict(), self.model_dir + '/' + num + '_critic_params.pkl')
-        torch.save(self.eval_rnn.state_dict(),  self.model_dir + '/' + num + '_rnn_params.pkl')
+        model_save_dir = os.path.join(self.args.model_dir, self.args.alg, self.args.map, self.args.run_name)
+        if not os.path.exists(model_save_dir):
+            os.makedirs(model_save_dir)
+        torch.save(self.eval_critic.state_dict(), model_save_dir + '/' + num + '_critic_params.pkl')
+        torch.save(self.eval_rnn.state_dict(),  model_save_dir + '/' + num + '_rnn_params.pkl')

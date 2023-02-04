@@ -17,8 +17,8 @@ def get_common_args():
     parser.add_argument('--replay_dir', type=str, default='', help='absolute path to save the replay')
     # The alternative algorithms are vdn, coma, central_v, qmix, qtran_base,
     # qtran_alt, reinforce, coma+commnet, central_v+commnet, reinforce+commnet，
-    # coma+g2anet, central_v+g2anet, reinforce+g2anet, maven
-    # parser.add_argument('--alg', type=str, default='reinforce+g2anet', help='the algorithm to train the agent')
+    # coma+g2anet, central_v+g2anet, reinforce+g2anet, maven,
+    # unfinished: coma+ucb1
     parser.add_argument('--alg', type=str, default='coma+g2anet', help='the algorithm to train the agent')
     parser.add_argument('--n_steps', type=int, default=2000000, help='total time steps')
     parser.add_argument('--n_episodes', type=int, default=1, help='the number of episodes before once training')
@@ -34,6 +34,8 @@ def get_common_args():
     parser.add_argument('--load_model', action="store_true", default=False, help='whether to load the pretrained model')
     parser.add_argument('--evaluate', action="store_true", default=False, help='whether to evaluate the model')
     parser.add_argument('--cuda', action="store_true", default=False, help='whether to use the GPU')
+    parser.add_argument('--tensorboard', action="store_true", default=False, help='whether to use tensorboard')
+    parser.add_argument('--debug_no_eval', action='store_true', default=False, help='bypass eval to accelerate debugging')
     args = parser.parse_args()
     return args
 
@@ -56,7 +58,7 @@ def get_coma_args(args):
     args.td_lambda = 0.8
 
     # how often to save the model
-    args.save_cycle = 5000
+    args.save_cycle = 3000
 
     # how often to update the target_net
     args.target_update_cycle = 200

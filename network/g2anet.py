@@ -105,6 +105,7 @@ class G2ANet(nn.Module):
 
             # 加权求和，注意三个矩阵的最后一维是n_agents - 1维度，得到(batch_size, args.attention_dim)
             x_i = (v_i * soft_weight * hard_weights[i]).sum(dim=-1)
+
             x.append(x_i)
 
         # 合并每个agent的h与x
