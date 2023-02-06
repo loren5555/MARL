@@ -19,12 +19,12 @@ class MARLLogger:
             args=None
     ):
         if args is not None:
-            if args.map is not None:
-                log_dir = os.path.join(log_dir, args.map)
             if args.alg is not None:
                 log_dir = os.path.join(log_dir, args.alg)
+            if args.map is not None:
+                log_dir = os.path.join(log_dir, args.map)
 
-        args.run_name = log_name[0:-4]
+        args.run_name = log_name.replace(".log", "")
 
         if os.path.exists(log_dir) is False:
             os.makedirs(log_dir)

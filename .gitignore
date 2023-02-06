@@ -2,4 +2,6 @@
 /.vscode/
 /ori_model/
 /ori_result/
+/model/
+/result/
 **/__pycache__/

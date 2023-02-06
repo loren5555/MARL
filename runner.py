@@ -43,6 +43,7 @@ class Runner:
                     self.logger.info(f"time steps: {time_steps}, train steps: {train_steps}, "
                                      f"evaluate steps: {evaluate_steps}, win rate: {win_rate}, "
                                      f"episode reward: {episode_reward}")
+                    self.win_rates.append(win_rate)
                     self.episode_rewards.append(episode_reward)
                     self.plt(num)
                     evaluate_steps += 1
