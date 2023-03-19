@@ -20,7 +20,7 @@ class UCB1Net(nn.Module):
             # self.k = nn.Linear(args.rnn_hidden_dim, args.attention_dim, bias=False)
         self.v = nn.Linear(args.rnn_hidden_dim, args.attention_dim)
 
-        self.decoding = nn.Linear(args.rnn_hidden_dim + args.rnn_hidden_dim, args.n_actions)
+        self.decoding = nn.Linear(args.rnn_hidden_dim + args.attention_dim, args.n_actions)
         self.args = args
         self.input_shape = input_shape
 
@@ -28,9 +28,6 @@ class UCB1Net(nn.Module):
         # 用于替换Hard attention
         # input self.h
         # output bool 与某个智能体的通信权重决定的是否通讯
-        # TODO 1：仅替代HardAttention， 2：替代G2ANet
-        # TODO 重写UCB代码
-
         # ucb1
 
         # (n_agents, batch_size, 1, n_agents)
@@ -46,40 +43,14 @@ class UCB1Net(nn.Module):
 
         return f.relu(masked_weights)
 
-    def forward(self, obs, hidden_state):
-        size = obs.shape[0]  # batch_size * n_agents
-        obs_encoding = f.relu(self.encoding(obs))
-        h_in = hidden_state.reshape(-1, self.args.rnn_hidden_dim)
-
-        h_out = self.h(obs_encoding, h_in)  # 智能体隐藏状态， 用于记忆历史信息
-        # v = f.relu(self.v(h_out)).reshape(-1, self.args.n_agents, self.args.attention_dim)  # 注意力隐藏状态编码
-
-        # UCB1
-        ucb_weights = self.ucb1(h_out, size)   # (n_agents, batch_size, 1, n_agents)
-        ucb_weights = f.softmax(ucb_weights, dim=-1).permute(0, 1, 3, 2)
-
-        # region soft_attention not implemented
-        # if self.args.ucb1_soft:
-        #     pass
-        # else:
-        #     pass
-        # endregion
-
-        x = (h_out.view(-1, self.args.n_agents, self.args.rnn_hidden_dim) * ucb_weights).sum(dim=-2).reshape(-1, self.args.rnn_hidden_dim)
-
-        final_input = torch.cat([h_out, x], dim=-1)
-        output = self.decoding(final_input)
-
-        return output, h_out
-
-    # backup
+    # 全通信
     # def forward(self, obs, hidden_state):
     #     size = obs.shape[0]  # batch_size * n_agents
     #     obs_encoding = f.relu(self.encoding(obs))
     #     h_in = hidden_state.reshape(-1, self.args.rnn_hidden_dim)
     #
     #     h_out = self.h(obs_encoding, h_in)  # 智能体隐藏状态， 用于记忆历史信息
-    #     v = f.relu(self.v(h_out)).reshape(-1, self.args.n_agents, self.args.attention_dim)  # 注意力隐藏状态编码
+    #     # v = f.relu(self.v(h_out)).reshape(-1, self.args.n_agents, self.args.attention_dim)  # 注意力隐藏状态编码
     #
     #     # UCB1
     #     ucb_weights = self.ucb1(h_out, size)   # (n_agents, batch_size, 1, n_agents)
@@ -92,9 +63,40 @@ class UCB1Net(nn.Module):
     #     #     pass
     #     # endregion
     #
-    #     x = (v * ucb_weights).sum(dim=-2).reshape(-1, self.args.attention_dim)
+    #     x = (h_out.view(-1, self.args.n_agents, self.args.rnn_hidden_dim) * ucb_weights).sum(dim=-2).reshape(-1, self.args.rnn_hidden_dim)
     #
     #     final_input = torch.cat([h_out, x], dim=-1)
     #     output = self.decoding(final_input)
     #
     #     return output, h_out
+
+    # backup 全为1 弱attention
+    def forward(self, obs, hidden_state):
+        size = obs.shape[0]  # batch_size * n_agents
+        obs_encoding = f.relu(self.encoding(obs))
+        h_in = hidden_state.reshape(-1, self.args.rnn_hidden_dim)
+
+        h_out = self.h(obs_encoding, h_in)  # 智能体隐藏状态， 用于记忆历史信息
+        v = f.relu(self.v(h_out)).reshape(-1, self.args.n_agents, self.args.attention_dim)  # 注意力隐藏状态编码
+
+        # UCB1
+        ucb_weights = self.ucb1(h_out, size)   # (n_agents, batch_size, 1, n_agents)
+        ucb_weights = f.softmax(ucb_weights, dim=-1).permute(0, 1, 3, 2)
+
+        # region soft_attention not implemented
+        # if self.args.ucb1_soft:
+        #     pass
+        # else:
+        #     pass
+        # endregion
+
+        x = (v * ucb_weights).sum(dim=-2).reshape(-1, self.args.attention_dim)
+
+        final_input = torch.cat([h_out, x], dim=-1)
+        output = self.decoding(final_input)
+
+        if self.args.debug_output_chosen is True:
+            with open(globals()["DEBUG_OUT_DIR"], "w") as file:
+                f.write()
+
+        return output, h_out

@@ -2,18 +2,18 @@ import os
 from common.marl_logger import MARLLogger
 
 from runner import Runner
-from smac.env import StarCraft2Env
 from common.arguments import get_common_args, get_coma_args, get_mixer_args, get_centralv_args, get_reinforce_args, \
     get_commnet_args, get_g2anet_args, get_ucb1_args
 
+from common.reward_modified_env import RewardShapedStarCraft2Env
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # 解决某个错误 该错误可能由多个conda环境冲突引起
 
-# TODO 服务器训练需要log功能而不能在终端输出
 # TODO 添加Tensorboard支持 便于在服务器观看训练状况
 if __name__ == '__main__':
     common_args = get_common_args()
     logger = MARLLogger(logger_name="MARL", propagate=False, args=common_args)
-    for i in range(8):
+    for i in range(common_args.n_experiment):
         args = common_args
         if args.alg.find('coma') > -1:
             args = get_coma_args(args)
@@ -31,7 +31,8 @@ if __name__ == '__main__':
         if args.alg.find('ucb1') > -1:
             args = get_ucb1_args(args)
 
-        env = StarCraft2Env(
+        env = RewardShapedStarCraft2Env(
+            args,
             map_name=args.map,
             step_mul=args.step_mul,
             difficulty=args.difficulty,
@@ -58,3 +59,4 @@ if __name__ == '__main__':
             print('The win rate of {} is  {}'.format(args.alg, win_rate))
             break
         env.close()
+        logger.info(f"Experiment {i} finished.")

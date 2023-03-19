@@ -32,7 +32,6 @@ class Runner:
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 
-
     def run(self, num):
         time_steps, train_steps, evaluate_steps = 0, 0, -1  # 总步数， 训练轮数， 评测轮数, log轮数
         while time_steps < self.args.n_steps:
@@ -55,12 +54,14 @@ class Runner:
                 episodes.append(episode)
                 time_steps += steps
                 # print(_)
+
             # episode的每一项都是一个(1, episode_len, n_agents, 具体维度)四维数组，下面要把所有episode的的obs拼在一起
             episode_batch = episodes[0]
             episodes.pop(0)
             for episode in episodes:
                 for key in episode_batch.keys():
                     episode_batch[key] = np.concatenate((episode_batch[key], episode[key]), axis=0)
+
             if self.args.alg.find('coma') > -1 or self.args.alg.find('central_v') > -1 or self.args.alg.find('reinforce') > -1:
                 self.agents.train(episode_batch, train_steps, self.rolloutWorker.epsilon)
                 train_steps += 1

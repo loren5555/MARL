@@ -81,8 +81,6 @@ class COMA:
         # 学习过程中，要为每个episode的每个agent都维护一个eval_hidden
         self.eval_hidden = None
 
-
-
     def _get_critic_input_shape(self):
         # state
         input_shape = self.state_shape  # 48

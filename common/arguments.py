@@ -20,6 +20,7 @@ def get_common_args():
     # coma+g2anet, central_v+g2anet, reinforce+g2anet, maven,
     # unfinished: coma+ucb1
     parser.add_argument('--alg', type=str, default='coma+g2anet', help='the algorithm to train the agent')
+    parser.add_argument('--n_experiment', type=int, default=1, help='the number of repeating experiment ')
     parser.add_argument('--n_steps', type=int, default=2000000, help='total time steps')
     parser.add_argument('--n_episodes', type=int, default=1, help='the number of episodes before once training')
     parser.add_argument('--last_action', type=bool, default=True, help='whether to use the last action to choose action')
@@ -36,6 +37,13 @@ def get_common_args():
     parser.add_argument('--cuda', action="store_true", default=False, help='whether to use the GPU')
     parser.add_argument('--tensorboard', action="store_true", default=False, help='whether to use tensorboard')
     parser.add_argument('--debug_no_eval', action='store_true', default=False, help='bypass eval to accelerate debugging')
+
+    # reward reshape switch
+    parser.add_argument('--reward_reshape', action='store_true', default=True, help='calculate modified reward from state changement instead of smac reward')
+    # alternative reshape method
+    # smac_reward default SMAC reward
+    # static_potential_reward r + F(s, s') Potential-Based Reward Shaping
+    parser.add_argument('--reward_reshape_method', default='smac_reward', help='reward reshape method, neglected when reward_reshape is False')
     args = parser.parse_args()
     return args
 
@@ -177,7 +185,7 @@ def get_commnet_args(args):
 
 def get_g2anet_args(args):
     args.attention_dim = 32
-    args.hard = False
+    args.hard = True
     return args
 
 
@@ -186,3 +194,7 @@ def get_ucb1_args(args):
     args.attention_dim = 32
     args.ucb1_soft = False  # ucbnet中是否包含softattention
     return args
+
+
+def get_reward_shaping_args(args):
+    args.potential_ratio = 0.5
