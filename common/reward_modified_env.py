@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 from smac.env import StarCraft2Env
 from common.arguments import get_reward_shaping_args
 
@@ -91,6 +92,9 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
 
         return reward
 
+    def _smac_reward_reset(self):
+        pass
+
     def static_potential_reward(self):
         reward = self.smac_reward()
         self.state_dict = self.get_state_dict()
@@ -112,11 +116,17 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
     def _calculate_static_potential(self):
         # calculate static potential from state
         ally_health = self.state_dict["allies"][:, self.ally_state_attr_names.index("health")]
-        ally_shield = self.state_dict["allies"][:, self.ally_state_attr_names.index("shield")]
+        try:
+            ally_shield = self.state_dict["allies"][:, self.ally_state_attr_names.index("shield")]
+        except ValueError:
+            ally_shield = np.ndarray([0 * self.n_agents])
         ally_survive = self.n_agents - self.death_tracker_ally.sum()
 
         enemy_health = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("health")]
-        enemy_shield = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("shield")]
+        try:
+            enemy_shield = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("shield")]
+        except ValueError:
+            enemy_shield = np.ndarray([0 * self.n_enemies])
         enemy_lost_health = 1 - enemy_health
         enemy_lost_shield = 1 - enemy_shield
         enemy_killed = self.death_tracker_ally.sum()
@@ -131,3 +141,52 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
         ])
         return potential
 
+    def dynamic_potential_reward(self):
+        reward = self.smac_reward()
+        self.state_dict = self.get_state_dict()
+
+        potential = self._calculate_dynamic_potential()
+        F = self.args.gamma * potential - self.last_potential
+        reward = reward + F * self.potential_scale
+
+        self.last_potential = potential
+        self.last_state_dict = self.state_dict
+
+        return reward
+
+    def _dynamic_potential_reward_reset(self):
+        max_potential = self.n_agents * 3 + self.n_enemies * 3
+        self.potential_scale = self.args.potential_ratio / (max_potential / self.max_reward)
+        self.last_potential = self._calculate_dynamic_potential()
+
+    def _calculate_dynamic_potential(self):
+        # calculate dynamic potential from state
+        ally_health = self.state_dict["allies"][:, self.ally_state_attr_names.index("health")]
+        try:
+            ally_shield = self.state_dict["allies"][:, self.ally_state_attr_names.index("shield")]
+        except ValueError:
+            ally_shield = np.ndarray([0 * self.n_agents])
+        ally_survive = self.n_agents - self.death_tracker_ally.sum()
+
+        enemy_health = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("health")]
+        try:
+            enemy_shield = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("shield")]
+        except ValueError:
+            enemy_shield = np.ndarray([0 * self.n_enemies])
+        enemy_lost_health = 1 - enemy_health
+        enemy_lost_shield = 1 - enemy_shield
+        enemy_killed = self.death_tracker_ally.sum()
+
+        battle_process = self._episode_steps / self.episode_limit
+        process_weight = np.exp(- 2 * battle_process)
+        reverse_process_weight = 1 - np.exp(- 2 * battle_process)
+
+        potential = sum([
+            ally_health.sum() * np.exp(- 2 * battle_process),
+            ally_shield.sum() * np.exp(- 2 * battle_process),
+            ally_survive * np.exp(- 2 * battle_process),
+            enemy_lost_health.sum() * (1 - np.exp(- 2 * battle_process)),
+            enemy_lost_shield.sum() * (1 - np.exp(- 2 * battle_process)),
+            enemy_killed * (1 - np.exp(- 2 * battle_process))
+        ])
+        return potential

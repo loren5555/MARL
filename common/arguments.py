@@ -42,7 +42,8 @@ def get_common_args():
     parser.add_argument('--reward_reshape', action='store_true', default=True, help='calculate modified reward from state changement instead of smac reward')
     # alternative reshape method
     # smac_reward default SMAC reward
-    # static_potential_reward r + F(s, s') Potential-Based Reward Shaping
+    # static_potential_reward 𝑅′ (𝑠,𝑎,𝑠^′ )=𝑅(𝑠,𝑎,𝑠′ )+𝐹(𝑠,𝑠′) Potential-Based Reward Shaping
+    # dynamic_potential_reward 𝑅(𝑠,𝑎,𝑠^′ )+𝐹(𝑠,𝑡,𝑠′,𝑡′)
     parser.add_argument('--reward_reshape_method', default='smac_reward', help='reward reshape method, neglected when reward_reshape is False')
     args = parser.parse_args()
     return args
@@ -57,8 +58,8 @@ def get_coma_args(args):
     args.lr_critic = 1e-3
 
     # epsilon-greedy
-    args.epsilon = 0.5
-    args.anneal_epsilon = 0.00064
+    args.epsilon = 0.7
+    args.anneal_epsilon = 0.00016
     args.min_epsilon = 0.02
     args.epsilon_anneal_scale = 'episode'
 
@@ -66,7 +67,7 @@ def get_coma_args(args):
     args.td_lambda = 0.8
 
     # how often to save the model
-    args.save_cycle = 3000
+    args.save_cycle = 2000
 
     # how often to update the target_net
     args.target_update_cycle = 200
