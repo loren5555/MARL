@@ -3,6 +3,7 @@ import logging
 
 import numpy as np
 import matplotlib.pyplot as plt
+from torch.utils.tensorboard import SummaryWriter
 
 from agent.agent import Agents, CommAgents
 from common.rollout import RolloutWorker, CommRolloutWorker
@@ -24,27 +25,36 @@ class Runner:
         self.args = args
         self.win_rates = []
         self.episode_rewards = []
+        self.loss = []
 
         self.logger = logging.getLogger("MARL")
+        tb_path = os.path.join(self.args.tensorboard_dir, self.args.alg, self.args.map, self.args.experiment_name)
+        self.tb_writer = SummaryWriter(tb_path)
+
         # 用来保存plt和pkl
-        self.save_path = os.path.join(self.args.result_dir, args.alg, args.map, args.run_name)
+        self.save_path = os.path.join(self.args.result_dir, args.alg, args.map, args.experiment_name)
 
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
 
     def run(self, num):
-        time_steps, train_steps, evaluate_steps = 0, 0, -1  # 总步数， 训练轮数， 评测轮数, log轮数
-        while time_steps < self.args.n_steps:
+        time_steps, train_steps, evaluate_steps = 0, 0, -1  # 总步数， 训练轮数， 评测轮数
+        while train_steps < self.args.n_train_steps:
             # eval环节
             if self.args.debug_no_eval is False:
-                if time_steps // self.args.evaluate_cycle > evaluate_steps:
+                if train_steps // self.args.evaluate_cycle > evaluate_steps:
                     win_rate, episode_reward = self.evaluate()
+                    if train_steps == 0:
+                        self.logger.info(f"max_reward: {self.env.max_reward}")
                     self.logger.info(f"time steps: {time_steps}, train steps: {train_steps}, "
-                                     f"evaluate steps: {evaluate_steps}, win rate: {win_rate}, "
+                                     f"evaluate steps: {evaluate_steps + 2}, win rate: {win_rate}, "
                                      f"episode reward: {episode_reward}")
                     self.win_rates.append(win_rate)
                     self.episode_rewards.append(episode_reward)
                     self.plt(num)
+                    self.tb_writer.add_scalar(f"run{num}/win_rates", win_rate, train_steps)
+                    self.tb_writer.add_scalar(f"run{num}/episode_rewards", episode_reward, train_steps)
+
                     evaluate_steps += 1
 
             episodes = []
@@ -63,7 +73,10 @@ class Runner:
                     episode_batch[key] = np.concatenate((episode_batch[key], episode[key]), axis=0)
 
             if self.args.alg.find('coma') > -1 or self.args.alg.find('central_v') > -1 or self.args.alg.find('reinforce') > -1:
-                self.agents.train(episode_batch, train_steps, self.rolloutWorker.epsilon)
+                # 此处loss仅用作观察网络收敛情况，并非用作判断模型是否收敛
+                loss = self.agents.train(episode_batch, train_steps, self.rolloutWorker.epsilon)
+                self.tb_writer.add_scalar(f"run{num}/actor loss", loss[0], time_steps)
+                self.tb_writer.add_scalar(f"run{num}/critic loss", loss[1], time_steps)
                 train_steps += 1
             else:
                 self.buffer.store_episode(episode_batch)
@@ -71,6 +84,8 @@ class Runner:
                     mini_batch = self.buffer.sample(min(self.buffer.current_size, self.args.batch_size))
                     self.agents.train(mini_batch, train_steps)
                     train_steps += 1
+
+        # final evaluate
         win_rate, episode_reward = self.evaluate()
         self.logger.info(f"time steps: {time_steps}, train steps: {train_steps}, "
                          f"evaluate steps: {evaluate_steps}, win rate: {win_rate}, "
@@ -78,6 +93,8 @@ class Runner:
         self.win_rates.append(win_rate)
         self.episode_rewards.append(episode_reward)
         self.plt(num)
+        self.tb_writer.add_scalar(f"run{num}/win_rates", win_rate, train_steps)
+        self.tb_writer.add_scalar(f"run{num}/episode_rewards", episode_reward, train_steps)
 
     def evaluate(self):
         win_number = 0
@@ -95,12 +112,12 @@ class Runner:
         plt.cla()
         plt.subplot(2, 1, 1)
         plt.plot(range(len(self.win_rates)), self.win_rates)
-        plt.xlabel('step*{}'.format(self.args.evaluate_cycle))
+        plt.xlabel('train_step*{}'.format(self.args.evaluate_cycle))
         plt.ylabel('win_rates')
 
         plt.subplot(2, 1, 2)
         plt.plot(range(len(self.episode_rewards)), self.episode_rewards)
-        plt.xlabel('step*{}'.format(self.args.evaluate_cycle))
+        plt.xlabel('train_step*{}'.format(self.args.evaluate_cycle))
         plt.ylabel('episode_rewards')
 
         plt.savefig(self.save_path + '/plt_{}.png'.format(num), format='png')

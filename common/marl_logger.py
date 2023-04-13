@@ -23,6 +23,8 @@ class MARLLogger:
                 log_dir = os.path.join(log_dir, args.alg)
             if args.map is not None:
                 log_dir = os.path.join(log_dir, args.map)
+            if args.experiment_name is not None:
+                log_name = args.experiment_name + ".log"
 
         args.run_name = log_name.replace(".log", "")
 
@@ -46,7 +48,7 @@ class MARLLogger:
             self.logger.addHandler(sh)
 
         if file_log is True:
-            fh = logging.FileHandler(log_path)
+            fh = logging.FileHandler(log_path, encoding="utf-8")
             fh.setFormatter(formatter)
             fh.setLevel(file_level)
             self.logger.addHandler(fh)
@@ -66,10 +68,13 @@ class MARLLogger:
     def cri(self, message):
         self.logger.critical(message)
 
-    def starting_log(self, turn_number, args):
+    def starting_log(self, iter_number, args):
         self.logger.info("=" * 60)
+        self.logger.info("*" * 60)
         self.logger.info("=" * 60)
-        self.logger.info(f"Running {turn_number} run")
+        self.logger.info(f"Running {iter_number} run")
+        self.logger.info("=" * 60)
+        self.logger.info("*" * 60)
         self.logger.info("=" * 60)
         message = ""
         arg_list = list(vars(args).keys())
@@ -77,4 +82,3 @@ class MARLLogger:
         for arg in arg_list:
             message += f"\n{' ' * 4}{arg} = {getattr(args, arg)}"
         self.logger.info("parameters:" + message)
-        self.logger.info("=" * 60)

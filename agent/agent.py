@@ -125,9 +125,10 @@ class Agents:
         for key in batch.keys():
             if key != 'z':
                 batch[key] = batch[key][:, :max_episode_len]
-        self.policy.learn(batch, max_episode_len, train_step, epsilon)
+        loss = self.policy.learn(batch, max_episode_len, train_step, epsilon)
         if train_step > 0 and train_step % self.args.save_cycle == 0:
             self.policy.save_model(train_step)
+        return loss
 
 
 # Agent for communication
@@ -153,7 +154,6 @@ class CommAgents:
 
         self.logger = logging.getLogger("MARL")
         self.logger.info(f"Init CommAgents")
-
 
     # 根据weights得到概率，然后再根据epsilon选动作
     def choose_action(self, weights, avail_actions, epsilon):
@@ -211,16 +211,7 @@ class CommAgents:
         max_episode_len = self._get_max_episode_len(batch)
         for key in batch.keys():
             batch[key] = batch[key][:, :max_episode_len]
-        self.policy.learn(batch, max_episode_len, train_step, epsilon)
+        loss = self.policy.learn(batch, max_episode_len, train_step, epsilon)
         if train_step > 0 and train_step % self.args.save_cycle == 0:
             self.policy.save_model(train_step)
-
-
-
-
-
-
-
-
-
-
+        return loss

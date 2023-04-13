@@ -4,4 +4,6 @@
 /ori_result/
 /model/
 /result/
+/runs/
+/log/
 **/__pycache__/

@@ -8,6 +8,7 @@ Here are the param for the training
 
 def get_common_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--experiment_name', type=str, default=None, help='the name of the experiment')
     # the environment setting
     parser.add_argument('--difficulty', type=str, default='7', help='the difficulty of the game')
     parser.add_argument('--game_version', type=str, default='latest', help='the version of the game')
@@ -21,21 +22,23 @@ def get_common_args():
     # unfinished: coma+ucb1
     parser.add_argument('--alg', type=str, default='coma+g2anet', help='the algorithm to train the agent')
     parser.add_argument('--n_experiment', type=int, default=1, help='the number of repeating experiment ')
-    parser.add_argument('--n_steps', type=int, default=2000000, help='total time steps')
-    parser.add_argument('--n_episodes', type=int, default=1, help='the number of episodes before once training')
+    parser.add_argument('--n_steps', type=int, default=20000000, help='total time steps')
+    parser.add_argument('--n_train_steps', type=int, default=20001, help='total train_steps')
+    parser.add_argument('--n_episodes', type=int, default=16, help='the number of episodes before once training')
     parser.add_argument('--last_action', type=bool, default=True, help='whether to use the last action to choose action')
     parser.add_argument('--reuse_network', type=bool, default=True, help='whether to use one network for all agents')
     parser.add_argument('--gamma', type=float, default=0.99, help='discount factor')
-    parser.add_argument('--optimizer', type=str, default="RMS", help='optimizer')
-    parser.add_argument('--evaluate_cycle', type=int, default=5000, help='how often to evaluate the model')
+    # implemented optimizer: RMS, AdamW
+    parser.add_argument('--optimizer', type=str, default="AdamW", help='optimizer')
+    parser.add_argument('--evaluate_cycle', type=int, default=100, help='how often to evaluate the model')
     parser.add_argument('--evaluate_epoch', type=int, default=64, help='number of the epoch to evaluate the agent')
     parser.add_argument('--model_dir', type=str, default='./model', help='model directory of the policy')
     parser.add_argument('--result_dir', type=str, default='./result', help='result directory of the policy')
     parser.add_argument('--log_dir', type=str, default='./log', help='log directory of the policy')
+    parser.add_argument('--tensorboard_dir', type=str, default='./runs', help='directory to storge tensorboard files')
     parser.add_argument('--load_model', action="store_true", default=False, help='whether to load the pretrained model')
     parser.add_argument('--evaluate', action="store_true", default=False, help='whether to evaluate the model')
     parser.add_argument('--cuda', action="store_true", default=False, help='whether to use the GPU')
-    parser.add_argument('--tensorboard', action="store_true", default=False, help='whether to use tensorboard')
     parser.add_argument('--debug_no_eval', action='store_true', default=False, help='bypass eval to accelerate debugging')
 
     # reward reshape switch
@@ -43,8 +46,13 @@ def get_common_args():
     # alternative reshape method
     # smac_reward default SMAC reward
     # static_potential_reward 𝑅′ (𝑠,𝑎,𝑠^′ )=𝑅(𝑠,𝑎,𝑠′ )+𝐹(𝑠,𝑠′) Potential-Based Reward Shaping
+    # dynamic_potential_reward
+    # static_potential_reward_no_step_reward
+
     # dynamic_potential_reward 𝑅(𝑠,𝑎,𝑠^′ )+𝐹(𝑠,𝑡,𝑠′,𝑡′)
     parser.add_argument('--reward_reshape_method', default='smac_reward', help='reward reshape method, neglected when reward_reshape is False')
+    # the potential ratio in potential based reward reshaping method
+    parser.add_argument('--potential_ratio', type=float, default=0.5, help='the potential ratio in potential based reward reshaping method')
     args = parser.parse_args()
     return args
 
@@ -52,13 +60,13 @@ def get_common_args():
 # arguments of coma
 def get_coma_args(args):
     # network
-    args.rnn_hidden_dim = 64
+    args.rnn_hidden_dim = 128
     args.critic_dim = 128
     args.lr_actor = 1e-4
     args.lr_critic = 1e-3
 
     # epsilon-greedy
-    args.epsilon = 0.7
+    args.epsilon = 0.5
     args.anneal_epsilon = 0.00016
     args.min_epsilon = 0.02
     args.epsilon_anneal_scale = 'episode'
@@ -70,7 +78,7 @@ def get_coma_args(args):
     args.save_cycle = 2000
 
     # how often to update the target_net
-    args.target_update_cycle = 200
+    args.target_update_cycle = 100
 
     # prevent gradient explosion
     args.grad_norm_clip = 10
@@ -133,7 +141,7 @@ def get_centralv_args(args):
 
     # epsilon-greedy
     args.epsilon = 0.5
-    args.anneal_epsilon = 0.00064
+    args.anneal_epsilon = 0.00016
     args.min_epsilon = 0.02
     args.epsilon_anneal_scale = 'episode'
 
@@ -185,7 +193,7 @@ def get_commnet_args(args):
 
 
 def get_g2anet_args(args):
-    args.attention_dim = 32
+    args.attention_dim = 64
     args.hard = True
     return args
 
@@ -195,7 +203,3 @@ def get_ucb1_args(args):
     args.attention_dim = 32
     args.ucb1_soft = False  # ucbnet中是否包含softattention
     return args
-
-
-def get_reward_shaping_args(args):
-    args.potential_ratio = 0.5

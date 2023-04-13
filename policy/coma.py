@@ -48,12 +48,19 @@ class COMA:
         self.eval_critic = ComaCritic(critic_input_shape, self.args)
         self.target_critic = ComaCritic(critic_input_shape, self.args)
 
+        # 统计网络参数量 此结构为ac结构
+        c_num = sum(p.numel() for p in self.eval_rnn.parameters())
+        a_num = sum(p.numel() for p in self.eval_critic.parameters())
+        self.logger.info(f"参数数量:  critic:{c_num}, actor:{a_num}")
+
         if self.args.cuda:
             self.eval_rnn.cuda()
             self.eval_critic.cuda()
             self.target_critic.cuda()
 
-        self.model_dir = args.model_dir + '/' + args.alg + '/' + args.map
+        self.model_dir = args.model_dir + '/' + args.alg + '/' + args.map + '/' + args.experiment_name
+        # self.model_dir = args.model_dir + '/' + args.alg + '/' + args.map
+
         # 如果存在模型则加载模型
         if self.args.load_model:
             if os.path.exists(self.model_dir + '/rnn_params.pkl'):
@@ -62,7 +69,7 @@ class COMA:
                 map_location = 'cuda:0' if self.args.cuda else 'cpu'
                 self.eval_rnn.load_state_dict(torch.load(path_rnn, map_location=map_location))
                 self.eval_critic.load_state_dict(torch.load(path_coma, map_location=map_location))
-                print('Successfully load the model: {} and {}'.format(path_rnn, path_coma))
+                self.logger.info('Successfully load the model: {} and {}'.format(path_rnn, path_coma))
             else:
                 raise Exception("No model!")
 
@@ -75,6 +82,11 @@ class COMA:
         if args.optimizer == "RMS":
             self.critic_optimizer = torch.optim.RMSprop(self.critic_parameters, lr=args.lr_critic)
             self.rnn_optimizer = torch.optim.RMSprop(self.rnn_parameters, lr=args.lr_actor)
+        elif args.optimizer == "AdamW":
+            self.critic_optimizer = torch.optim.AdamW(self.critic_parameters, lr=args.lr_critic)
+            self.rnn_optimizer = torch.optim.AdamW(self.rnn_parameters, lr=args.lr_actor)
+        else:
+            raise Exception("wrong optimizer name")
         self.args = args
 
         # 执行过程中，要为每个agent都维护一个eval_hidden
@@ -107,7 +119,7 @@ class COMA:
             u = u.cuda()
             mask = mask.cuda()
         # 根据经验计算每个agent的Ｑ值,从而跟新Critic网络。然后计算各个动作执行的概率，从而计算advantage去更新Actor。
-        q_values = self._train_critic(batch, max_episode_len, train_step)  # 训练critic网络，并且得到每个agent的所有动作的Ｑ值
+        q_values, critic_loss = self._train_critic(batch, max_episode_len, train_step)  # 训练critic网络，并且得到每个agent的所有动作的Ｑ值
         action_prob = self._get_action_prob(batch, max_episode_len, epsilon)  # 每个agent的所有动作的概率
 
         q_taken = torch.gather(q_values, dim=3, index=u).squeeze(3)  # 每个agent的选择的动作对应的Ｑ值
@@ -131,6 +143,7 @@ class COMA:
         # print('Training: actor params')
         # for params in self.eval_rnn.named_parameters():
         #     print(params)
+        return loss, critic_loss
 
     def _get_critic_inputs(self, batch, transition_idx, max_episode_len):
         # 取出所有episode上该transition_idx的经验
@@ -305,12 +318,14 @@ class COMA:
         self.critic_optimizer.step()
         if train_step > 0 and train_step % self.args.target_update_cycle == 0:
             self.target_critic.load_state_dict(self.eval_critic.state_dict())
-        return q_values
+        return q_values, loss
 
     def save_model(self, train_step):
         num = str(train_step // self.args.save_cycle)
-        model_save_dir = os.path.join(self.args.model_dir, self.args.alg, self.args.map, self.args.run_name)
+        model_save_dir = os.path.join(self.args.model_dir, self.args.alg, self.args.map, self.args.experiment_name)
         if not os.path.exists(model_save_dir):
             os.makedirs(model_save_dir)
         torch.save(self.eval_critic.state_dict(), model_save_dir + '/' + num + '_critic_params.pkl')
+        self.logger.info(f"model saved to {num + '_critic_params.pkl'} in {model_save_dir}")
         torch.save(self.eval_rnn.state_dict(),  model_save_dir + '/' + num + '_rnn_params.pkl')
+        self.logger.info(f"model saved to {num + '_rnn_params.pkl'} in {model_save_dir}")
