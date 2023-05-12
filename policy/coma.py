@@ -47,6 +47,7 @@ class COMA:
         # 得到当前agent的所有可执行动作对应的联合Q值，得到之后需要用该Q值和actor网络输出的概率计算advantage
         self.eval_critic = ComaCritic(critic_input_shape, self.args)
         self.target_critic = ComaCritic(critic_input_shape, self.args)
+        # TODO 初始化权重方法
 
         # 统计网络参数量 此结构为ac结构
         c_num = sum(p.numel() for p in self.eval_rnn.parameters())
@@ -71,7 +72,7 @@ class COMA:
                 self.eval_critic.load_state_dict(torch.load(path_coma, map_location=map_location))
                 self.logger.info('Successfully load the model: {} and {}'.format(path_rnn, path_coma))
             else:
-                raise Exception("No model!")
+                raise Exception(f"No model in {self.model_dir}")
 
         # 让target_net和eval_net的网络参数相同
         self.target_critic.load_state_dict(self.eval_critic.state_dict())

@@ -17,6 +17,7 @@ class G2ANet(nn.Module):
         # GRU输入[[h_i,h_1],[h_i,h_2],...[h_i,h_n]]与[0,...,0]，输出[[h_1],[h_2],...,[h_n]]与[h_n]， h_j表示了agent j与agent i的关系
         # 输入的iputs维度为(n_agents - 1, batch_size * n_agents, rnn_hidden_dim * 2)，
         # 即对于batch_size条数据，输入每个agent与其他n_agents - 1个agents的hidden_state的连接
+        # TODO 未添加batch_first
         self.hard_bi_GRU = nn.GRU(args.rnn_hidden_dim * 2, args.rnn_hidden_dim, bidirectional=True)
         # 对h_j进行分析，得到agent j对于agent i的权重，输出两维，经过gumble_softmax后取其中一维即可，如果是0则不考虑agent j，如果是1则考虑
         self.hard_encoding = nn.Linear(args.rnn_hidden_dim * 2, 2)  # 乘2因为是双向GRU，hidden_state维度为2 * hidden_dim

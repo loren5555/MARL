@@ -194,6 +194,16 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
             - enemy_health.sum() * reverse_process_weight,
             - enemy_shield.sum() * reverse_process_weight,
             - enemy_survive * reverse_process_weight,
-            - battle_process
+            - battle_process * 1
         ])
         return potential
+
+    # dynamic potential reward, without step reward
+    def dynamic_potential_reward_no_step_reward(self):
+        reward = self.dynamic_potential_reward()
+        return reward
+
+    def _dynamic_potential_reward_no_step_reward_reset(self):
+        self.reward_sparse = True
+        self.max_reward = 1
+        self._dynamic_potential_reward_reset()

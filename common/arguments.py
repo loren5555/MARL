@@ -48,6 +48,7 @@ def get_common_args():
     # static_potential_reward 𝑅′ (𝑠,𝑎,𝑠^′ )=𝑅(𝑠,𝑎,𝑠′ )+𝐹(𝑠,𝑠′) Potential-Based Reward Shaping
     # dynamic_potential_reward
     # static_potential_reward_no_step_reward
+    # dynamic_potential_reward_no_step_reward
 
     # dynamic_potential_reward 𝑅(𝑠,𝑎,𝑠^′ )+𝐹(𝑠,𝑡,𝑠′,𝑡′)
     parser.add_argument('--reward_reshape_method', default='smac_reward', help='reward reshape method, neglected when reward_reshape is False')
