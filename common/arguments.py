@@ -42,7 +42,7 @@ def get_common_args():
     parser.add_argument('--debug_no_eval', action='store_true', default=False, help='bypass eval to accelerate debugging')
 
     # reward reshape switch
-    parser.add_argument('--reward_reshape', action='store_true', default=True, help='calculate modified reward from state changement instead of smac reward')
+    parser.add_argument('--reward_reshape', action='store_true', default=False, help='calculate modified reward from state changement instead of smac reward')
     # alternative reshape method
     # smac_reward default SMAC reward
     # static_potential_reward 𝑅′ (𝑠,𝑎,𝑠^′ )=𝑅(𝑠,𝑎,𝑠′ )+𝐹(𝑠,𝑠′) Potential-Based Reward Shaping
@@ -54,6 +54,8 @@ def get_common_args():
     parser.add_argument('--reward_reshape_method', default='smac_reward', help='reward reshape method, neglected when reward_reshape is False')
     # the potential ratio in potential based reward reshaping method
     parser.add_argument('--potential_ratio', type=float, default=0.5, help='the potential ratio in potential based reward reshaping method')
+    parser.add_argument('--weight_increase_factor', type=float, default=0.1, help='the increase speed of the weight of enemy health')
+    parser.add_argument('--process_weight_factor', type=float, default=1, help='the weight of time punishment')
     args = parser.parse_args()
     return args
 
@@ -67,7 +69,7 @@ def get_coma_args(args):
     args.lr_critic = 1e-3
 
     # epsilon-greedy
-    args.epsilon = 0.5
+    args.epsilon = 0.8
     args.anneal_epsilon = 0.00016
     args.min_epsilon = 0.02
     args.epsilon_anneal_scale = 'episode'

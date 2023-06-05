@@ -6,6 +6,7 @@ from common.arguments import get_common_args, get_coma_args, get_mixer_args, get
 
 from common.marl_logger import MARLLogger
 from common.reward_modified_env import RewardShapedStarCraft2Env
+from smac.env import StarCraft2Env
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"  # 解决某个错误 该错误可能由多个conda环境冲突引起
 
@@ -40,8 +41,20 @@ if __name__ == '__main__':
             replay_dir=args.replay_dir,
             window_size_x=1024,
             window_size_y=768,
-            reward_only_positive=False
+            reward_only_positive=True,
+            reward_negative_scale=0.5
         )
+
+        # env = StarCraft2Env(
+        #     map_name=args.map,
+        #     step_mul=args.step_mul,
+        #     difficulty=args.difficulty,
+        #     game_version=args.game_version,
+        #     replay_dir=args.replay_dir,
+        #     window_size_x=1024,
+        #     window_size_y=768,
+        #     reward_only_positive=False
+        # )
 
         env_info = env.get_env_info()
         args.n_actions = env_info["n_actions"]

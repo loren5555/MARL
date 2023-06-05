@@ -15,6 +15,8 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
         self.args = args
         self.logger = logging.getLogger("MARL")
         if args.reward_reshape is True:
+            self.total_ally_health = None
+            self.total_enemy_health = None
             self.state_dict = None
             self.last_state_dict = None
             # TODO 通过重写reward_battle方法实现的reward shaping不能修改胜负带来的reward。
@@ -26,11 +28,13 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
 
         if self.args.reward_reshape is True:
             # redefine win and death reward
-            total_enemy_health = sum([(enemy.health_max + enemy.shield_max) for enemy in self.enemies.values()])
-            self.reward_win = 2 * total_enemy_health
-            self.reward_death_value = total_enemy_health // self.n_enemies
-            self.max_reward = total_enemy_health + self.reward_death_value * self.n_enemies + self.reward_win
-            self.reward_defeat = - 0.5 * self.reward_win
+            self.total_enemy_health = sum([(enemy.health_max + enemy.shield_max) for enemy in self.enemies.values()])
+            self.total_ally_health = sum([(agent.health_max + agent.shield_max) for agent in self.agents.values()])
+
+            self.reward_win = 10 * self.total_enemy_health // self.n_enemies
+            self.reward_death_value = self.total_enemy_health // self.n_enemies
+            self.max_reward = self.total_enemy_health + self.reward_death_value * self.n_enemies + self.reward_win
+            self.reward_defeat = - self.reward_negative_scale * self.reward_win
 
             self.state_dict = self.get_state_dict()
             self.last_state_dict = self.state_dict
@@ -41,7 +45,6 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
 
     def smac_reward(self):
         # ori smac reward
-        reward = 0
         delta_deaths = 0
         delta_ally = 0
         delta_enemy = 0
@@ -82,7 +85,7 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
                     delta_enemy += prev_health - e_unit.health - e_unit.shield
 
         if self.reward_only_positive:
-            reward = abs(delta_enemy + delta_deaths)  # shield regeneration
+            reward = max((delta_enemy + delta_deaths, 0))  # shield regeneration
         else:
             reward = delta_enemy + delta_deaths - delta_ally
 
@@ -163,40 +166,60 @@ class RewardShapedStarCraft2Env(StarCraft2Env):
         return reward
 
     def _dynamic_potential_reward_reset(self):
-        max_potential = self.n_agents * 3 + self.n_enemies * 3
+        max_potential = self.n_agents
         self.potential_scale = self.args.potential_ratio / (max_potential / self.max_reward)
         self.last_potential = self._calculate_dynamic_potential()
 
     def _calculate_dynamic_potential(self):
         # calculate dynamic potential from state
-        ally_health = self.state_dict["allies"][:, self.ally_state_attr_names.index("health")]
-        try:
-            ally_shield = self.state_dict["allies"][:, self.ally_state_attr_names.index("shield")]
-        except ValueError:
-            ally_shield = np.zeros(self.n_agents)
+        ally_health = sum(agent.health + agent.shield for agent in self.agents.values())
+        ally_health_ratio = ally_health / self.total_ally_health
         ally_survive = self.n_agents - self.death_tracker_ally.sum()
 
-        enemy_health = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("health")]
-        try:
-            enemy_shield = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("shield")]
-        except ValueError:
-            enemy_shield = np.zeros(self.n_enemies)
+        enemy_health = sum(enemy.health + enemy.shield for enemy in self.enemies.values())
+        enemy_health_ratio = enemy_health / self.total_enemy_health
         enemy_survive = self.n_enemies - self.death_tracker_enemy.sum()
 
         battle_process = self._episode_steps / self.episode_limit
-        process_weight = 1 - battle_process
-        reverse_process_weight = battle_process + 1
+        process_weight = 1 + battle_process * self.args.weight_increase_factor
 
-        potential = sum([
-            ally_health.sum() * process_weight,
-            ally_shield.sum() * process_weight,
-            ally_survive * process_weight,
-            - enemy_health.sum() * reverse_process_weight,
-            - enemy_shield.sum() * reverse_process_weight,
-            - enemy_survive * reverse_process_weight,
-            - battle_process * 1
-        ])
+        potential = (ally_health_ratio * ally_survive - enemy_health_ratio * enemy_survive * process_weight) - battle_process * self.args.process_weight_factor * self.n_agents
+
         return potential
+
+    # def _calculate_dynamic_potential(self):
+    #     # calculate dynamic potential from state
+    #     ally_health = self.state_dict["allies"][:, self.ally_state_attr_names.index("health")]
+    #     # ally_health_max = 0
+    #     try:
+    #         ally_shield = self.state_dict["allies"][:, self.ally_state_attr_names.index("shield")]
+    #     except ValueError:
+    #         ally_shield = np.zeros(self.n_agents)
+    #     ally_survive = self.n_agents - self.death_tracker_ally.sum()
+    #
+    #     enemy_health = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("health")]
+    #     try:
+    #         enemy_shield = self.state_dict["enemies"][:, self.enemy_state_attr_names.index("shield")]
+    #     except ValueError:
+    #         enemy_shield = np.zeros(self.n_enemies)
+    #     enemy_survive = self.n_enemies - self.death_tracker_enemy.sum()
+    #
+    #     battle_process = self._episode_steps / self.episode_limit
+    #     process_weight = 1 - battle_process
+    #     reverse_process_weight = battle_process + 1
+    #
+    #     potential = (ally_health)
+    #
+    #     potential = sum([
+    #         ally_health.sum() * process_weight,
+    #         ally_shield.sum() * process_weight,
+    #         ally_survive * process_weight,
+    #         - enemy_health.sum() * reverse_process_weight,
+    #         - enemy_shield.sum() * reverse_process_weight,
+    #         - enemy_survive * reverse_process_weight,
+    #         - battle_process * 1
+    #     ])
+    #     return potential
 
     # dynamic potential reward, without step reward
     def dynamic_potential_reward_no_step_reward(self):

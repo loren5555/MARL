@@ -14,7 +14,7 @@ class Runner:
     def __init__(self, env, args):
         self.env = env
 
-        if args.alg.find('commnet') > -1 or args.alg.find('g2anet') > -1 or args.alg.find('ucb1'):  # communication agent
+        if args.alg.find('commnet') > -1 or args.alg.find('g2anet') > -1 or args.alg.find('ucb1') > -1:  # communication agent
             self.agents = CommAgents(args)
             self.rolloutWorker = CommRolloutWorker(env, self.agents, args)
         else:  # no communication agent
